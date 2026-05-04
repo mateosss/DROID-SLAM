@@ -10,7 +10,7 @@ wget https://vision.in.tum.de/rgbd/dataset/freiburg3/rgbd_dataset_freiburg3_cabi
 tar -zxvf rgbd_dataset_freiburg3_cabinet.tgz
 rm rgbd_dataset_freiburg3_cabinet.tgz
 
-wget http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/machine_hall/MH_03_medium/MH_03_medium.zip
+wget https://syncandshare.lrz.de/dl/fiBwLLQWbnAwg9r6Qn6uzb/MH_03_medium.zip
 unzip MH_03_medium.zip
 rm MH_03_medium.zip
 

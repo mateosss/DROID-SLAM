@@ -49,18 +49,19 @@ python -c "import torch; print(torch.version.cuda)"
 ```
 
 ```Bash
-python3 -m venv .venv
+module load cuda/12.6.3
+python3.10 -m venv .venv
 source .venv/bin/activate
 
 # install requirements (tested up to torch 2.7)
-pip install -r requirements.txt
+pip install -r requirements_frozen.txt
 
 # optional (for visualization)
 pip install moderngl moderngl-window
 
 # install third-party modules (this will take a while)
-pip install thirdparty/lietorch
-pip install thirdparty/pytorch_scatter
+pip install -v thirdparty/lietorch
+pip install -v --no-build-isolation wheel thirdparty/pytorch_scatter
 
 # install droid-backends
 pip install -e .
