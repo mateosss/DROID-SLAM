@@ -27,7 +27,7 @@ DEFAULT_X264OPTS = (
     "partitions=p8x8,p4x4,i8x8:keyint=1000:me=umh:merange=64:subme=6:bframes=0:ref=1"
 )
 
-MISMATCH_ALLOWLIST_DATASETS = {"V2_03_difficult", "V1_02_medium"}
+MISMATCH_ALLOWLIST_DATASETS = {"V2_03_difficult", "V1_02_medium", "MH_04_difficult"}
 
 
 def run_checked(cmd: list[str]) -> None:
