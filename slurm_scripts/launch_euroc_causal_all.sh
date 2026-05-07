@@ -36,7 +36,7 @@ for seq in "${SEQUENCES[@]}"; do
     echo "  [skip] ${seq}: directory missing at ${EUROC_ROOT}/${seq}" >&2
     continue
   fi
-  jobid=$(sbatch --parsable --export=ALL,EUROC_SEQUENCE="${seq}" "${SLURM_FILE}")
+  jobid=$(sbatch --parsable --job-name="droid-${seq}" --export=ALL,EUROC_SEQUENCE="${seq}" "${SLURM_FILE}")
   echo "  [ok]   ${seq}: job ${jobid}"
 done
 echo "Done. Track with: squeue -u \$USER"

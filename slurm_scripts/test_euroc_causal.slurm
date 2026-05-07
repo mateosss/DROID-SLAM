@@ -4,6 +4,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=20G
 #SBATCH --time=00:30:00
+# Skip Pascal (sm_61, no tensor cores, slow) and Blackwell (sm_120, CUDA toolchain
+# in this env can't target it). Build is for sm 7.5/8.6/8.9/9.0.
+#SBATCH --exclude=node1,node2,node6,node7,node22
 #SBATCH --output=/home/stud/hilscher/DROID-SLAM/slurm_outputs/euroc-causal-%j.out
 #SBATCH --error=/home/stud/hilscher/DROID-SLAM/slurm_outputs/euroc-causal-%j.err
 #SBATCH --mail-user=slurmbot-bPpujGpQYWMTPxWBnt@vision.in.tum.de
@@ -50,6 +53,12 @@ VRAM_MONITOR_INTERVAL=2
 RUN_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 SCENE_NAME=$(basename "${DATAPATH}")
 RUN_TAG="run_${RUN_TIMESTAMP}_job${SLURM_JOB_ID}"
+
+# If the launcher didn't pass --job-name (i.e. the user submitted directly via
+# sbatch), rename the job here so squeue/sacct/email show the sequence.
+if command -v scontrol >/dev/null 2>&1; then
+  scontrol update JobId="${SLURM_JOB_ID}" Name="droid-${SCENE_NAME}" >/dev/null 2>&1 || true
+fi
 
 RUN_OUTPUT_DIR="${OUTPUT_BASE_DIR}/${SCENE_NAME}/${RUN_TAG}"
 mkdir -p "${RUN_OUTPUT_DIR}"
