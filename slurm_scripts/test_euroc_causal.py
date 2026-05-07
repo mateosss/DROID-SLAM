@@ -19,6 +19,7 @@ from depth_video import DepthVideo
 from droid_frontend import DroidFrontend
 from droid_net import DroidNet
 from motion_filter import MotionFilter
+from trajectory_filler import PoseTrajectoryFiller
 
 # Besides using the EUROC timestamps all other changes to the original image_stream
 # of test_euroc.py are cosmetic (lower case variable names, path library, ...)
@@ -188,6 +189,18 @@ class CausalDroid:
         traj = lietorch.SE3(poses).inv().data.detach().cpu().numpy()
         return timestamps, traj
 
+    # Dense trajectory via PoseTrajectoryFiller: SE(3) screw interpolation
+    # between bracketing keyframes + 6 iters of motion-only BA per non-keyframe.
+    # Keyframe poses in self.video are NOT modified (no global BA).
+    def filled_trajectory(self, image_stream_list):
+        timestamps = np.asarray(
+            [t for (t, _, _) in image_stream_list], dtype=np.float64
+        )
+        filler = PoseTrajectoryFiller(self.net, self.video)
+        camera_trajectory = filler(image_stream_list)
+        traj = camera_trajectory.inv().data.detach().cpu().numpy()
+        return timestamps, traj
+
     def close(self):
         if hasattr(self, "visualizer"):
             self.visualizer.terminate()
@@ -220,12 +233,20 @@ def parse_args():
         )
     )
     parser.add_argument("--datapath", required=True, help="path to one EuRoC sequence")
-    parser.add_argument("--save_path", required=True, help="EuRoC-format output trajectory path")
+    parser.add_argument("--save_path", required=True, help="EuRoC-format output trajectory path (keyframes only)")
+    parser.add_argument(
+        "--save_path_filled",
+        help=(
+            "optional EuRoC-format output path for the dense trajectory produced "
+            "by the trajectory filler (per-frame motion-only BA, no global BA)"
+        ),
+    )
     parser.add_argument("--weights", default="droid.pth")
     parser.add_argument("--buffer", type=int, default=512)
     parser.add_argument("--image_size", type=int, nargs=2, default=[320, 512])
     parser.add_argument("--stereo", action="store_true")
-    parser.add_argument("--stride", type=int, default=1, help="input image stride; keep 1 for causal evaluation")
+    parser.add_argument("--stride", type=int, default=1, help="raw input stride applied when building the image list (filler operates on this list)")
+    parser.add_argument("--track_stride", type=int, default=1, help="within the strided list, feed every Nth frame to the tracker; filler still uses every frame")
 
     vis = parser.add_mutually_exclusive_group()
     vis.add_argument("--disable_vis", dest="disable_vis", action="store_true", default=True)
@@ -253,14 +274,21 @@ if __name__ == "__main__":
 
     droid = CausalDroid(args)
     images = image_stream(args.datapath, image_size=args.image_size, stereo=args.stereo, stride=args.stride)
+    track_images = images[::args.track_stride]
 
+    filled = None
     try:
-        for timestamp, image, intrinsics in tqdm(images, desc=scene):
+        for timestamp, image, intrinsics in tqdm(track_images, desc=scene):
             droid.track(timestamp, image, intrinsics=intrinsics)
 
         est_ts, est_traj = droid.keyframe_trajectory()
+        save_euroc_trajectory(args.save_path, est_ts, est_traj)
+        print(f"Saved causal EuRoC keyframe trajectory to {args.save_path}")
+
+        if args.save_path_filled:
+            filled = droid.filled_trajectory(images)
+            filled_ts, filled_traj = filled
+            save_euroc_trajectory(args.save_path_filled, filled_ts, filled_traj)
+            print(f"Saved filled EuRoC trajectory to {args.save_path_filled}")
     finally:
         droid.close()
-
-    save_euroc_trajectory(args.save_path, est_ts, est_traj)
-    print(f"Saved causal EuRoC trajectory to {args.save_path}")
